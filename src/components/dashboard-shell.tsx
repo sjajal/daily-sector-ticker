@@ -610,7 +610,7 @@ export function DashboardShell({ initialData }: DashboardShellProps) {
             </span>
             <span className="pill">Set {data.selectionDate}</span>
             <span className="pill">Updated {formatTime(data.generatedAt)}</span>
-            <button className="refresh-button" onClick={refreshData} disabled={isRefreshing}>
+            <button className="refresh-button" onClick={() => void refreshData()} disabled={isRefreshing}>
               {isRefreshing ? "Refreshing" : "Refresh"}
             </button>
           </div>
