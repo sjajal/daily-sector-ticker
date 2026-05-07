@@ -1,9 +1,18 @@
 import { SECTORS, type SectorId, type TickerCandidate } from "./tickers";
-import type { DashboardPayload, NewsItem, Quote, RankedTicker } from "./types";
+import type {
+  DashboardPayload,
+  InsiderTransaction,
+  NewsItem,
+  PoliticianTrade,
+  Quote,
+  RankedTicker,
+} from "./types";
 import { createMockDashboard } from "./mock-data";
 import { getEasternDateKey, getMarketStatus, rankMovements } from "./market";
+import { createTradingSignal } from "./signals";
 
 const FINNHUB_BASE_URL = "https://finnhub.io/api/v1";
+const QUIVER_BASE_URL = "https://api.quiverquant.com/beta";
 
 let dailySelectionCache:
   | {
@@ -35,8 +44,44 @@ type FinnhubNewsItem = {
   url?: string;
 };
 
+type FinnhubInsiderTransaction = {
+  name?: string;
+  share?: number;
+  change?: number;
+  transactionPrice?: number;
+  transactionCode?: string;
+  filingDate?: string;
+  transactionDate?: string;
+};
+
+type FinnhubInsiderResponse = {
+  symbol?: string;
+  data?: FinnhubInsiderTransaction[];
+};
+
+type QuiverCongressTrade = {
+  Ticker?: string;
+  Symbol?: string;
+  Representative?: string;
+  Senator?: string;
+  Name?: string;
+  Chamber?: string;
+  Party?: string;
+  Transaction?: string;
+  TransactionType?: string;
+  Amount?: string;
+  Range?: string;
+  ReportDate?: string;
+  DisclosureDate?: string;
+  TransactionDate?: string;
+};
+
 function getFinnhubToken() {
   return process.env.FINNHUB_API_KEY?.trim();
+}
+
+function getQuiverToken() {
+  return process.env.QUIVER_API_KEY?.trim();
 }
 
 async function finnhubFetch<T>(
@@ -105,6 +150,76 @@ async function fetchNews(symbol: string): Promise<NewsItem[]> {
     }));
 }
 
+async function fetchInsiderTransactions(symbol: string): Promise<InsiderTransaction[]> {
+  const now = new Date();
+  const from = new Date(now);
+  from.setDate(from.getDate() - 120);
+
+  const data = await finnhubFetch<FinnhubInsiderResponse>("/stock/insider-transactions", {
+    symbol,
+    from: from.toISOString().slice(0, 10),
+    to: now.toISOString().slice(0, 10),
+  });
+
+  return (data.data ?? []).slice(0, 5).map((item, index) => ({
+    id: `${symbol}-insider-${item.filingDate ?? "unknown"}-${index}`,
+    symbol,
+    name: item.name ?? "Unknown insider",
+    share: item.share ?? 0,
+    change: item.change ?? 0,
+    transactionPrice: item.transactionPrice ?? 0,
+    transactionCode: item.transactionCode ?? "N/A",
+    filingDate: item.filingDate ?? "N/A",
+    transactionDate: item.transactionDate ?? "N/A",
+  }));
+}
+
+function normalizeCongressTrade(symbol: string, trade: QuiverCongressTrade, index: number) {
+  const rawTransaction = (trade.Transaction ?? trade.TransactionType ?? "").toLowerCase();
+  const transaction = rawTransaction.includes("purchase")
+    ? "purchase"
+    : rawTransaction.includes("sale")
+      ? "sale"
+      : "unknown";
+
+  return {
+    id: `${symbol}-congress-${trade.ReportDate ?? trade.DisclosureDate ?? "unknown"}-${index}`,
+    symbol,
+    politician: trade.Representative ?? trade.Senator ?? trade.Name ?? "Unknown politician",
+    chamber: trade.Chamber ?? "Congress",
+    party: trade.Party ?? "N/A",
+    transaction,
+    amount: trade.Amount ?? trade.Range ?? "Undisclosed",
+    reportDate: trade.ReportDate ?? trade.DisclosureDate ?? "N/A",
+    transactionDate: trade.TransactionDate ?? "N/A",
+  } satisfies PoliticianTrade;
+}
+
+async function fetchPoliticianTrades(symbol: string): Promise<PoliticianTrade[]> {
+  const token = getQuiverToken();
+  if (!token) return [];
+
+  const url = new URL(`${QUIVER_BASE_URL}/live/congresstrading`);
+  url.searchParams.set("ticker", symbol);
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    next: { revalidate: 60 * 60 * 6 },
+  });
+
+  if (!response.ok) return [];
+
+  const payload = (await response.json()) as QuiverCongressTrade[] | { data?: QuiverCongressTrade[] };
+  const rows = Array.isArray(payload) ? payload : (payload.data ?? []);
+
+  return rows
+    .filter((trade) => (trade.Ticker ?? trade.Symbol ?? symbol).toUpperCase() === symbol)
+    .slice(0, 5)
+    .map((trade, index) => normalizeCongressTrade(symbol, trade, index));
+}
+
 function scoreTicker(quote: Quote, newsCount: number) {
   const movementScore = Math.abs(quote.percentChange) * 2;
   const directionBonus = quote.percentChange > 0 ? 1.25 : 0;
@@ -117,10 +232,18 @@ function scoreTicker(quote: Quote, newsCount: number) {
 }
 
 async function rankTicker(candidate: TickerCandidate): Promise<RankedTicker> {
-  const [quote, news] = await Promise.all([
+  const [quote, news, insiderTransactions, politicianTrades] = await Promise.all([
     fetchQuote(candidate.symbol),
     fetchNews(candidate.symbol).catch(() => []),
+    fetchInsiderTransactions(candidate.symbol).catch(() => []),
+    fetchPoliticianTrades(candidate.symbol).catch(() => []),
   ]);
+  const signal = createTradingSignal({
+    quote,
+    newsCount: news.length,
+    insiderTransactions,
+    politicianTrades,
+  });
 
   return {
     rank: 0,
@@ -130,6 +253,9 @@ async function rankTicker(candidate: TickerCandidate): Promise<RankedTicker> {
     quote,
     news,
     newsCount: news.length,
+    insiderTransactions,
+    politicianTrades,
+    signal,
     score: scoreTicker(quote, news.length),
   };
 }

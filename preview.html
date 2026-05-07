@@ -373,6 +373,81 @@
         line-height: 1.35;
       }
 
+      .mode-switcher {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .mode-switcher button {
+        min-height: 40px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #0b111a;
+        color: #adbacb;
+        cursor: pointer;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 0.8rem;
+      }
+
+      .mode-switcher button.active {
+        border-color: var(--cyan);
+        color: var(--cyan);
+        background: rgba(56, 189, 248, 0.08);
+      }
+
+      .signal-list,
+      .activity-list {
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+      }
+
+      .signal-row,
+      .activity-row {
+        display: grid;
+        gap: 10px;
+        padding: 11px;
+        border: 1px solid rgba(38, 52, 70, 0.68);
+        border-radius: 8px;
+        background: #0a1018;
+      }
+
+      .signal-row {
+        grid-template-columns: 48px minmax(0, 1fr) auto;
+        align-items: center;
+      }
+
+      .activity-row {
+        grid-template-columns: 56px minmax(0, 1fr);
+      }
+
+      .score {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border: 1px solid rgba(246, 198, 89, 0.6);
+        border-radius: 50%;
+        color: var(--amber);
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      }
+
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      .tags span {
+        padding: 3px 7px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: #adbacb;
+        font-size: 0.72rem;
+      }
+
       @keyframes scroll {
         from {
           transform: translateX(0);
@@ -400,6 +475,7 @@
 
         .topbar,
         .brief,
+        .mode-switcher,
         .sectors,
         .movement-grid {
           grid-template-columns: 1fr;
@@ -452,10 +528,24 @@
 
         <div class="content">
           <div class="main">
+            <nav class="mode-switcher">
+              <button class="active">Momentum</button>
+              <button>News Flow</button>
+              <button>Insiders</button>
+              <button>Risk</button>
+            </nav>
             <section class="sectors">
               <button class="sector-card active"><span class="sector-card-top"><span>AI</span><span class="positive">+1.28%</span></span><strong>NVDA</strong><span class="sector-card-bottom"><span>12 headlines</span><span>5 tracked</span></span></button>
               <button class="sector-card"><span class="sector-card-top"><span>Energy</span><span class="positive">+0.42%</span></span><strong>FSLR</strong><span class="sector-card-bottom"><span>8 headlines</span><span>5 tracked</span></span></button>
               <button class="sector-card"><span class="sector-card-top"><span>Space</span><span class="negative">-0.18%</span></span><strong>RKLB</strong><span class="sector-card-bottom"><span>7 headlines</span><span>5 tracked</span></span></button>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header"><div><h2>Trading Intelligence</h2><p class="muted">Momentum, risk, insider, and Congress activity signals.</p></div></div>
+              <div class="signal-list">
+                <div class="signal-row"><span class="score">68</span><div><b class="symbol">NVDA</b><div class="tags"><span>Momentum surge</span><span>News heavy</span><span>Insider buying</span></div></div><span class="move positive">+2.11%</span></div>
+                <div class="signal-row"><span class="score">61</span><div><b class="symbol">PLTR</b><div class="tags"><span>Near day high</span><span>Congress buys</span></div></div><span class="move positive">+2.74%</span></div>
+              </div>
             </section>
 
             <section class="panel">
@@ -466,12 +556,12 @@
               <div class="table-wrap">
                 <table>
                   <thead>
-                    <tr><th>Rank</th><th>Ticker</th><th>Price</th><th>Move</th><th>Range</th><th>News</th><th>Quote Time</th></tr>
+                    <tr><th>Rank</th><th>Ticker</th><th>Price</th><th>Move</th><th>Signal</th><th>Range</th><th>Insider</th><th>Congress</th><th>News</th><th>Quote Time</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td><span class="badge">#1</span></td><td><b class="symbol">NVDA</b><br><small class="muted">NVIDIA</small></td><td class="price" data-price="887.42">$887.42</td><td><span class="move positive" data-percent="2.11">+2.11%</span><br><small class="muted" data-change="18.31">+18.31</small></td><td><div class="range"><div class="range-track"><i></i></div><div class="range-labels"><span>$872.18</span><span>$892.44</span></div></div></td><td><span class="news-count">4</span></td><td class="small quote-time">May 7, 10:42 AM EDT</td></tr>
-                    <tr><td><span class="badge">#2</span></td><td><b class="symbol">PLTR</b><br><small class="muted">Palantir</small></td><td class="price" data-price="24.70">$24.70</td><td><span class="move positive" data-percent="2.74">+2.74%</span><br><small class="muted" data-change="0.66">+0.66</small></td><td><div class="range"><div class="range-track"><i></i></div><div class="range-labels"><span>$24.04</span><span>$24.91</span></div></div></td><td><span class="news-count">3</span></td><td class="small quote-time">May 7, 10:42 AM EDT</td></tr>
-                    <tr><td><span class="badge">#3</span></td><td><b class="symbol">SMCI</b><br><small class="muted">Super Micro Computer</small></td><td class="price" data-price="812.20">$812.20</td><td><span class="move negative" data-percent="-1.11">-1.11%</span><br><small class="muted" data-change="-9.14">-9.14</small></td><td><div class="range"><div class="range-track"><i></i></div><div class="range-labels"><span>$803.61</span><span>$823.70</span></div></div></td><td><span class="news-count">2</span></td><td class="small quote-time">May 7, 10:42 AM EDT</td></tr>
+                    <tr><td><span class="badge">#1</span></td><td><b class="symbol">NVDA</b><br><small class="muted">NVIDIA</small></td><td class="price" data-price="887.42">$887.42</td><td><span class="move positive" data-percent="2.11">+2.11%</span><br><small class="muted" data-change="18.31">+18.31</small></td><td><span class="score">68</span></td><td><div class="range"><div class="range-track"><i></i></div><div class="range-labels"><span>$872.18</span><span>$892.44</span></div></div></td><td class="positive">Buying</td><td class="muted">Quiet</td><td><span class="news-count">4</span></td><td class="small quote-time">May 7, 10:42 AM EDT</td></tr>
+                    <tr><td><span class="badge">#2</span></td><td><b class="symbol">PLTR</b><br><small class="muted">Palantir</small></td><td class="price" data-price="24.70">$24.70</td><td><span class="move positive" data-percent="2.74">+2.74%</span><br><small class="muted" data-change="0.66">+0.66</small></td><td><span class="score">61</span></td><td><div class="range"><div class="range-track"><i></i></div><div class="range-labels"><span>$24.04</span><span>$24.91</span></div></div></td><td class="muted">Quiet</td><td class="positive">Buys</td><td><span class="news-count">3</span></td><td class="small quote-time">May 7, 10:42 AM EDT</td></tr>
+                    <tr><td><span class="badge">#3</span></td><td><b class="symbol">SMCI</b><br><small class="muted">Super Micro Computer</small></td><td class="price" data-price="812.20">$812.20</td><td><span class="move negative" data-percent="-1.11">-1.11%</span><br><small class="muted" data-change="-9.14">-9.14</small></td><td><span class="score">43</span></td><td><div class="range"><div class="range-track"><i></i></div><div class="range-labels"><span>$803.61</span><span>$823.70</span></div></div></td><td class="negative">Selling</td><td class="muted">Quiet</td><td><span class="news-count">2</span></td><td class="small quote-time">May 7, 10:42 AM EDT</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -484,6 +574,13 @@
           </div>
 
           <aside class="side">
+            <section class="panel">
+              <div class="panel-header"><div><h2>Insider / Politician Tape</h2><p class="muted">Insider filings now; Congress trades with Quiver.</p></div></div>
+              <div class="activity-list">
+                <div class="activity-row"><b class="symbol">NVDA</b><div><strong>Director purchase</strong><span class="positive">Bought 12,500 shares</span><small class="muted">Insider / demo filing</small></div></div>
+                <div class="activity-row"><b class="symbol">PLTR</b><div><strong>House member</strong><span class="positive">purchase $15K-$50K</span><small class="muted">Congress / demo report</small></div></div>
+              </div>
+            </section>
             <section class="panel">
               <div class="panel-header"><div><h2>News Alerts</h2><p class="muted">Ticker-specific flashes, newest first.</p></div></div>
               <div class="news-list">

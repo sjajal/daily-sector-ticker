@@ -205,7 +205,7 @@ button {
 
 .brief-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   border-bottom: 1px solid var(--border);
   background: rgba(9, 14, 21, 0.76);
 }
@@ -257,6 +257,30 @@ button {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.mode-switcher {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mode-switcher button {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0b111a;
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-family: var(--font-geist-mono);
+  font-size: 0.8rem;
+}
+
+.mode-switcher button:hover,
+.mode-switcher button.active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(56, 189, 248, 0.08);
 }
 
 .sector-card {
@@ -351,7 +375,7 @@ button {
 
 .table {
   width: 100%;
-  min-width: 920px;
+  min-width: 1180px;
   border-collapse: collapse;
 }
 
@@ -415,6 +439,40 @@ button {
   text-align: left;
 }
 
+.signal-gauge {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.score-ring {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: #0a1018;
+  font-family: var(--font-geist-mono);
+  font-size: 0.82rem;
+}
+
+.risk-low {
+  border-color: rgba(40, 209, 124, 0.55);
+  color: var(--green);
+}
+
+.risk-medium {
+  border-color: rgba(246, 198, 89, 0.6);
+  color: var(--amber);
+}
+
+.risk-high {
+  border-color: rgba(255, 96, 112, 0.62);
+  color: var(--red);
+}
+
 .positive {
   color: var(--green);
 }
@@ -456,6 +514,69 @@ button {
 
 .movement-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.signal-list,
+.activity-list {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.signal-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: #0a1018;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.tag-row span {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted-strong);
+  font-size: 0.72rem;
+}
+
+.activity-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: #0a1018;
+}
+
+.activity-row div {
+  display: grid;
+  gap: 4px;
+}
+
+.activity-row small {
+  color: var(--muted);
+}
+
+.empty-state {
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .movement-list {
@@ -572,11 +693,7 @@ button {
 
 @media (max-width: 1180px) {
   .brief-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .brief-tile:nth-child(2) {
-    border-right: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .content-grid {
@@ -604,6 +721,7 @@ button {
 
   .brief-strip,
   .sector-overview,
+  .mode-switcher,
   .movement-grid {
     grid-template-columns: 1fr;
   }

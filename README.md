@@ -8,6 +8,7 @@ Create a `.env.local` file:
 
 ```bash
 FINNHUB_API_KEY=your_finnhub_api_key_here
+QUIVER_API_KEY=optional_quiver_api_key_for_congress_trades
 ```
 
 Install dependencies and run the app:
@@ -22,6 +23,8 @@ Then open `http://localhost:3000`.
 ## Data Behavior
 
 - `/api/dashboard` fetches Finnhub quotes and company news.
+- Finnhub also powers recent company insider transaction signals when the endpoint is available for a ticker.
+- `QUIVER_API_KEY` is optional and enables congressional/politician trade signals through Quiver Quantitative.
 - The selected five tickers per sector are cached for the current New York trading date.
 - Quotes and news refresh every minute.
 - If `FINNHUB_API_KEY` is missing, the app renders demo data with a visible setup warning.

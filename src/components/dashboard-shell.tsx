@@ -19,6 +19,8 @@ type SectorSummary = {
   newsCount: number;
 };
 
+type TradingMode = "momentum" | "news" | "insider" | "risk";
+
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -55,6 +57,12 @@ function signedNumber(value: number) {
 
 function changeClass(value: number) {
   return value >= 0 ? "positive" : "negative";
+}
+
+function activityLabel(value: number, positiveLabel: string, negativeLabel: string) {
+  if (value > 0) return positiveLabel;
+  if (value < 0) return negativeLabel;
+  return "Quiet";
 }
 
 function compactHeadline(news?: NewsItem) {
@@ -100,6 +108,17 @@ function BriefTile({
   );
 }
 
+function SignalGauge({ ticker }: { ticker: RankedTicker }) {
+  return (
+    <div className="signal-gauge">
+      <span className={`score-ring risk-${ticker.signal.risk}`}>
+        {ticker.signal.score}
+      </span>
+      <span className="ticker-sub">{ticker.signal.risk} risk</span>
+    </div>
+  );
+}
+
 function SectorCard({
   summary,
   active,
@@ -137,7 +156,10 @@ function SectorTable({ tickers }: { tickers: RankedTicker[] }) {
             <th>Ticker</th>
             <th>Price</th>
             <th>Move</th>
+            <th>Signal</th>
             <th>Range</th>
+            <th>Insider</th>
+            <th>Congress</th>
             <th>News</th>
             <th>Quote Time</th>
           </tr>
@@ -166,7 +188,20 @@ function SectorTable({ tickers }: { tickers: RankedTicker[] }) {
                 </div>
               </td>
               <td>
+                <SignalGauge ticker={ticker} />
+              </td>
+              <td>
                 <RangeMeter ticker={ticker} />
+              </td>
+              <td>
+                <span className={changeClass(ticker.signal.insiderNetShares)}>
+                  {activityLabel(ticker.signal.insiderNetShares, "Buying", "Selling")}
+                </span>
+              </td>
+              <td>
+                <span className={changeClass(ticker.signal.politicianNetTrades)}>
+                  {activityLabel(ticker.signal.politicianNetTrades, "Buys", "Sells")}
+                </span>
               </td>
               <td>
                 <span className="news-count">{ticker.newsCount}</span>
@@ -177,6 +212,118 @@ function SectorTable({ tickers }: { tickers: RankedTicker[] }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function TradingModes({
+  mode,
+  onChange,
+}: {
+  mode: TradingMode;
+  onChange: (mode: TradingMode) => void;
+}) {
+  const modes: { id: TradingMode; label: string }[] = [
+    { id: "momentum", label: "Momentum" },
+    { id: "news", label: "News Flow" },
+    { id: "insider", label: "Insiders" },
+    { id: "risk", label: "Risk" },
+  ];
+
+  return (
+    <div className="mode-switcher" aria-label="Trading view mode">
+      {modes.map((item) => (
+        <button
+          className={item.id === mode ? "active" : ""}
+          key={item.id}
+          onClick={() => onChange(item.id)}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SignalPanel({ tickers }: { tickers: RankedTicker[] }) {
+  const leaders = [...tickers].sort((a, b) => b.signal.score - a.signal.score).slice(0, 5);
+
+  return (
+    <section className="panel signal-panel">
+      <div className="panel-header compact">
+        <div>
+          <h2>Trading Intelligence</h2>
+          <div className="meta">Momentum, risk, insider, and Congress activity signals.</div>
+        </div>
+      </div>
+      <div className="signal-list">
+        {leaders.map((ticker) => (
+          <div className="signal-row" key={`signal-${ticker.symbol}`}>
+            <SignalGauge ticker={ticker} />
+            <div>
+              <strong className="mono">{ticker.symbol}</strong>
+              <div className="tag-row">
+                {ticker.signal.tags.length > 0
+                  ? ticker.signal.tags.map((tag) => <span key={`${ticker.symbol}-${tag}`}>{tag}</span>)
+                  : <span>Normal tape</span>}
+              </div>
+            </div>
+            <span className={`move-chip ${changeClass(ticker.quote.percentChange)}`}>
+              {pct(ticker.quote.percentChange)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ActivityPanel({ tickers }: { tickers: RankedTicker[] }) {
+  const activity = tickers
+    .flatMap((ticker) => [
+      ...ticker.insiderTransactions.map((item) => ({
+        id: item.id,
+        symbol: ticker.symbol,
+        title: item.name,
+        detail: `${item.change > 0 ? "Bought" : "Sold"} ${Math.abs(item.change).toLocaleString()} shares`,
+        meta: `Insider / filed ${item.filingDate}`,
+        tone: item.change >= 0 ? "positive" : "negative",
+      })),
+      ...ticker.politicianTrades.map((item) => ({
+        id: item.id,
+        symbol: ticker.symbol,
+        title: item.politician,
+        detail: `${item.transaction} ${item.amount}`,
+        meta: `${item.chamber} / reported ${item.reportDate}`,
+        tone: item.transaction === "purchase" ? "positive" : "negative",
+      })),
+    ])
+    .slice(0, 8);
+
+  return (
+    <section className="panel activity-panel">
+      <div className="panel-header compact">
+        <div>
+          <h2>Insider / Politician Tape</h2>
+          <div className="meta">Insider filings now; Congress trades when Quiver is configured.</div>
+        </div>
+      </div>
+      <div className="activity-list">
+        {activity.length > 0 ? (
+          activity.map((item) => (
+            <div className="activity-row" key={item.id}>
+              <span className="ticker-symbol">{item.symbol}</span>
+              <div>
+                <strong>{item.title}</strong>
+                <span className={item.tone}>{item.detail}</span>
+                <small>{item.meta}</small>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="empty-state">No insider or politician activity in the current window.</div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -272,6 +419,7 @@ function NewsTape({ news }: { news: NewsItem[] }) {
 export function DashboardShell({ initialData }: DashboardShellProps) {
   const [data, setData] = useState(initialData);
   const [activeSector, setActiveSector] = useState<SectorId>("ai");
+  const [tradingMode, setTradingMode] = useState<TradingMode>("momentum");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const refreshData = useCallback(async () => {
@@ -329,6 +477,7 @@ export function DashboardShell({ initialData }: DashboardShellProps) {
     (a, b) => Math.abs(b.quote.percentChange) - Math.abs(a.quote.percentChange),
   )[0];
   const mostCovered = [...allSelected].sort((a, b) => b.newsCount - a.newsCount)[0];
+  const strongestSignal = [...allSelected].sort((a, b) => b.signal.score - a.signal.score)[0];
   const latestNews = visibleNews[0];
 
   return (
@@ -383,6 +532,18 @@ export function DashboardShell({ initialData }: DashboardShellProps) {
             tone="neutral"
           />
           <BriefTile
+            label="Best Signal"
+            value={strongestSignal?.symbol ?? "--"}
+            detail={strongestSignal ? `${strongestSignal.signal.score}/100 ${strongestSignal.signal.risk} risk` : "No data"}
+            tone={
+              strongestSignal?.signal.risk === "high"
+                ? "negative"
+                : strongestSignal?.signal.risk === "low"
+                  ? "positive"
+                  : "neutral"
+            }
+          />
+          <BriefTile
             label="Latest Flash"
             value={latestNews?.symbol ?? "--"}
             detail={compactHeadline(latestNews)}
@@ -392,6 +553,7 @@ export function DashboardShell({ initialData }: DashboardShellProps) {
 
         <div className="content-grid">
           <div className="main-column">
+            <TradingModes mode={tradingMode} onChange={setTradingMode} />
             <section className="sector-overview" aria-label="Sector overview">
               {sectorSummaries.map((summary) => (
                 <SectorCard
@@ -402,6 +564,8 @@ export function DashboardShell({ initialData }: DashboardShellProps) {
                 />
               ))}
             </section>
+
+            <SignalPanel tickers={allSelected} />
 
             <section
               className="panel ranking-panel"
@@ -440,6 +604,7 @@ export function DashboardShell({ initialData }: DashboardShellProps) {
           </div>
 
           <aside className="side-column">
+            <ActivityPanel tickers={allSelected} />
             <section className="panel lead-news">
               <div className="panel-header compact">
                 <div>

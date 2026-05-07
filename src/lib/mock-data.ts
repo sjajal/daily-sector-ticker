@@ -1,6 +1,14 @@
 import { SECTORS } from "./tickers";
-import type { DashboardPayload, NewsItem, Quote, RankedTicker } from "./types";
+import type {
+  DashboardPayload,
+  InsiderTransaction,
+  NewsItem,
+  PoliticianTrade,
+  Quote,
+  RankedTicker,
+} from "./types";
 import { getEasternDateKey, getMarketStatus, rankMovements } from "./market";
+import { createTradingSignal } from "./signals";
 
 function mockQuote(symbol: string, index: number): Quote {
   const seed = symbol.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
@@ -34,6 +42,43 @@ function mockNews(symbol: string, company: string, index: number): NewsItem[] {
   ];
 }
 
+function mockInsiders(symbol: string, index: number): InsiderTransaction[] {
+  const direction = index % 3 === 0 ? 1 : index % 3 === 1 ? -1 : 0;
+  if (direction === 0) return [];
+
+  return [
+    {
+      id: `${symbol}-insider-demo-${index}`,
+      symbol,
+      name: direction > 0 ? "Director purchase" : "Officer sale",
+      share: direction > 0 ? 12500 : 42000,
+      change: direction > 0 ? 12500 : -42000,
+      transactionPrice: 0,
+      transactionCode: direction > 0 ? "P" : "S",
+      filingDate: "Demo",
+      transactionDate: "Demo",
+    },
+  ];
+}
+
+function mockPoliticianTrades(symbol: string, index: number): PoliticianTrade[] {
+  if (index % 4 > 1) return [];
+
+  return [
+    {
+      id: `${symbol}-congress-demo-${index}`,
+      symbol,
+      politician: index % 2 === 0 ? "House member" : "Senate member",
+      chamber: index % 2 === 0 ? "House" : "Senate",
+      party: "N/A",
+      transaction: index % 2 === 0 ? "purchase" : "sale",
+      amount: "$15K-$50K",
+      reportDate: "Demo",
+      transactionDate: "Demo",
+    },
+  ];
+}
+
 export function createMockDashboard(error?: string): DashboardPayload {
   const sectors = Object.fromEntries(
     SECTORS.map((sector) => {
@@ -41,6 +86,14 @@ export function createMockDashboard(error?: string): DashboardPayload {
         .map((ticker, index) => {
           const quote = mockQuote(ticker.symbol, index);
           const news = mockNews(ticker.symbol, ticker.company, index);
+          const insiderTransactions = mockInsiders(ticker.symbol, index);
+          const politicianTrades = mockPoliticianTrades(ticker.symbol, index);
+          const signal = createTradingSignal({
+            quote,
+            newsCount: news.length,
+            insiderTransactions,
+            politicianTrades,
+          });
           return {
             rank: index + 1,
             symbol: ticker.symbol,
@@ -49,6 +102,9 @@ export function createMockDashboard(error?: string): DashboardPayload {
             quote,
             news,
             newsCount: news.length,
+            insiderTransactions,
+            politicianTrades,
+            signal,
             score: Math.abs(quote.percentChange) * 2 + news.length * 0.75,
           } satisfies RankedTicker;
         })

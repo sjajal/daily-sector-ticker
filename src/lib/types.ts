@@ -21,6 +21,39 @@ export type NewsItem = {
   datetime: number;
 };
 
+export type InsiderTransaction = {
+  id: string;
+  symbol: string;
+  name: string;
+  share: number;
+  change: number;
+  transactionPrice: number;
+  transactionCode: string;
+  filingDate: string;
+  transactionDate: string;
+};
+
+export type PoliticianTrade = {
+  id: string;
+  symbol: string;
+  politician: string;
+  chamber: string;
+  party: string;
+  transaction: "purchase" | "sale" | "unknown";
+  amount: string;
+  reportDate: string;
+  transactionDate: string;
+};
+
+export type TradingSignal = {
+  score: number;
+  risk: "low" | "medium" | "high";
+  rangePosition: number;
+  insiderNetShares: number;
+  politicianNetTrades: number;
+  tags: string[];
+};
+
 export type RankedTicker = {
   rank: number;
   symbol: string;
@@ -29,6 +62,9 @@ export type RankedTicker = {
   quote: Quote;
   news: NewsItem[];
   newsCount: number;
+  insiderTransactions: InsiderTransaction[];
+  politicianTrades: PoliticianTrade[];
+  signal: TradingSignal;
   score: number;
 };
 
