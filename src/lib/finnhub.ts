@@ -1,4 +1,10 @@
-import { SECTORS, type SectorId, type TickerCandidate } from "./tickers";
+import {
+  getSectorDefinitions,
+  type CustomWatchlist,
+  type SectorDefinition,
+  type SectorId,
+  type TickerCandidate,
+} from "./tickers";
 import type {
   DashboardPayload,
   InsiderTransaction,
@@ -17,6 +23,7 @@ const QUIVER_BASE_URL = "https://api.quiverquant.com/beta";
 let dailySelectionCache:
   | {
       date: string;
+      key: string;
       sectors: Record<SectorId, TickerCandidate[]>;
     }
   | undefined;
@@ -260,13 +267,20 @@ async function rankTicker(candidate: TickerCandidate): Promise<RankedTicker> {
   };
 }
 
-async function selectDailyTickers(selectionDate: string) {
-  if (dailySelectionCache?.date === selectionDate) {
+function getWatchlistKey(sectors: SectorDefinition[]) {
+  return sectors
+    .map((sector) => `${sector.id}:${sector.tickers.map((ticker) => ticker.symbol).join(",")}`)
+    .join("|");
+}
+
+async function selectDailyTickers(selectionDate: string, sectors: SectorDefinition[]) {
+  const key = getWatchlistKey(sectors);
+  if (dailySelectionCache?.date === selectionDate && dailySelectionCache.key === key) {
     return dailySelectionCache.sectors;
   }
 
   const sectorEntries = await Promise.all(
-    SECTORS.map(async (sector) => {
+    sectors.map(async (sector) => {
       const ranked = await Promise.all(sector.tickers.map(rankTicker));
       const selected = ranked
         .sort((a, b) => b.score - a.score)
@@ -283,22 +297,24 @@ async function selectDailyTickers(selectionDate: string) {
 
   dailySelectionCache = {
     date: selectionDate,
+    key,
     sectors: Object.fromEntries(sectorEntries) as Record<SectorId, TickerCandidate[]>,
   };
 
   return dailySelectionCache.sectors;
 }
 
-export async function getDashboardData(): Promise<DashboardPayload> {
+export async function getDashboardData(customWatchlist?: CustomWatchlist): Promise<DashboardPayload> {
   if (!getFinnhubToken()) {
     return createMockDashboard("Missing FINNHUB_API_KEY. Showing demo data.");
   }
 
   try {
+    const sectorDefinitions = getSectorDefinitions(customWatchlist);
     const selectionDate = getEasternDateKey();
-    const dailySelection = await selectDailyTickers(selectionDate);
+    const dailySelection = await selectDailyTickers(selectionDate, sectorDefinitions);
     const sectorEntries = await Promise.all(
-      SECTORS.map(async (sector) => {
+      sectorDefinitions.map(async (sector) => {
         const selectedCandidates = dailySelection[sector.id] ?? sector.tickers.slice(0, 5);
         const ranked = await Promise.all(selectedCandidates.map(rankTicker));
         const topFive = ranked.map((ticker, index) => ({ ...ticker, rank: index + 1 }));

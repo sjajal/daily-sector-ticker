@@ -396,6 +396,57 @@
         background: rgba(56, 189, 248, 0.08);
       }
 
+      .watchlist-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        padding: 12px;
+      }
+
+      .watchlist-field {
+        display: grid;
+        gap: 7px;
+      }
+
+      .watchlist-field span {
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+      }
+
+      .watchlist-field input {
+        width: 100%;
+        min-height: 38px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #080d14;
+        color: var(--foreground);
+        padding: 8px 10px;
+        font: 0.86rem ui-monospace, SFMono-Regular, Consolas, monospace;
+      }
+
+      .editor-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .editor-actions button {
+        min-height: 34px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #0b111a;
+        color: var(--foreground);
+        cursor: pointer;
+        padding: 7px 10px;
+      }
+
+      .editor-actions .primary {
+        border-color: var(--cyan);
+        color: var(--cyan);
+        background: rgba(56, 189, 248, 0.08);
+      }
+
       .signal-list,
       .activity-list {
         display: grid;
@@ -476,6 +527,7 @@
         .topbar,
         .brief,
         .mode-switcher,
+        .watchlist-grid,
         .sectors,
         .movement-grid {
           grid-template-columns: 1fr;
@@ -534,6 +586,17 @@
               <button>Insiders</button>
               <button>Risk</button>
             </nav>
+            <section class="panel">
+              <div class="panel-header">
+                <div><h2>Customize Watchlist</h2><p class="muted">Enter comma-separated tickers. Saved in this browser.</p></div>
+                <div class="editor-actions"><button>Reset</button><button class="primary">Apply</button></div>
+              </div>
+              <div class="watchlist-grid">
+                <label class="watchlist-field"><span>AI</span><input value="NVDA, AMD, MSFT, GOOGL, PLTR, SMCI, AVGO" /></label>
+                <label class="watchlist-field"><span>Energy</span><input value="XOM, CVX, COP, SLB, NEE, ENPH, FSLR" /></label>
+                <label class="watchlist-field"><span>Space</span><input value="RKLB, LUNR, ASTS, PL, SPCE, BA, LMT" /></label>
+              </div>
+            </section>
             <section class="sectors">
               <button class="sector-card active"><span class="sector-card-top"><span>AI</span><span class="positive">+1.28%</span></span><strong>NVDA</strong><span class="sector-card-bottom"><span>12 headlines</span><span>5 tracked</span></span></button>
               <button class="sector-card"><span class="sector-card-top"><span>Energy</span><span class="positive">+0.42%</span></span><strong>FSLR</strong><span class="sector-card-bottom"><span>8 headlines</span><span>5 tracked</span></span></button>

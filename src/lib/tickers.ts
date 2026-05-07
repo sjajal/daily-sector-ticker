@@ -13,6 +13,8 @@ export type TickerCandidate = {
   sector: SectorId;
 };
 
+export type CustomWatchlist = Partial<Record<SectorId, string[]>>;
+
 export const SECTORS: SectorDefinition[] = [
   {
     id: "ai",
@@ -59,3 +61,28 @@ export const SECTORS: SectorDefinition[] = [
 ];
 
 export const ALL_TICKERS = SECTORS.flatMap((sector) => sector.tickers);
+
+export function getSectorDefinitions(customWatchlist?: CustomWatchlist): SectorDefinition[] {
+  if (!customWatchlist) return SECTORS;
+
+  return SECTORS.map((sector) => {
+    const customSymbols = customWatchlist[sector.id]
+      ?.map((symbol) => symbol.trim().toUpperCase())
+      .filter(Boolean)
+      .slice(0, 12);
+
+    if (!customSymbols || customSymbols.length === 0) return sector;
+
+    return {
+      ...sector,
+      tickers: customSymbols.map((symbol) => {
+        const known = ALL_TICKERS.find((ticker) => ticker.symbol === symbol);
+        return {
+          symbol,
+          company: known?.company ?? symbol,
+          sector: sector.id,
+        };
+      }),
+    };
+  });
+}

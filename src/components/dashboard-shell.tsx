@@ -21,6 +21,10 @@ type SectorSummary = {
 
 type TradingMode = "momentum" | "news" | "insider" | "risk";
 
+type WatchlistDraft = Record<SectorId, string>;
+
+const WATCHLIST_STORAGE_KEY = "daily-sector-ticker-watchlist";
+
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -244,6 +248,88 @@ function TradingModes({
   );
 }
 
+function defaultWatchlistDraft(): WatchlistDraft {
+  return Object.fromEntries(
+    SECTORS.map((sector) => [
+      sector.id,
+      sector.tickers.map((ticker) => ticker.symbol).join(", "),
+    ]),
+  ) as WatchlistDraft;
+}
+
+function parseStoredWatchlist(): WatchlistDraft {
+  if (typeof window === "undefined") return defaultWatchlistDraft();
+
+  try {
+    const stored = window.localStorage.getItem(WATCHLIST_STORAGE_KEY);
+    if (!stored) return defaultWatchlistDraft();
+    const parsed = JSON.parse(stored) as Partial<WatchlistDraft>;
+    return {
+      ...defaultWatchlistDraft(),
+      ...parsed,
+    };
+  } catch {
+    return defaultWatchlistDraft();
+  }
+}
+
+function buildWatchlistParams(draft: WatchlistDraft) {
+  const params = new URLSearchParams();
+
+  SECTORS.forEach((sector) => {
+    const symbols = draft[sector.id]
+      .split(",")
+      .map((symbol) => symbol.trim().toUpperCase())
+      .filter(Boolean)
+      .slice(0, 12);
+
+    if (symbols.length > 0) {
+      params.set(sector.id, symbols.join(","));
+    }
+  });
+
+  return params;
+}
+
+function WatchlistEditor({
+  draft,
+  onChange,
+  onSave,
+  onReset,
+}: {
+  draft: WatchlistDraft;
+  onChange: (sector: SectorId, value: string) => void;
+  onSave: () => void;
+  onReset: () => void;
+}) {
+  return (
+    <section className="panel watchlist-editor">
+      <div className="panel-header compact">
+        <div>
+          <h2>Customize Watchlist</h2>
+          <div className="meta">Enter comma-separated tickers. Saved in this browser.</div>
+        </div>
+        <div className="editor-actions">
+          <button onClick={onReset}>Reset</button>
+          <button className="primary" onClick={onSave}>Apply</button>
+        </div>
+      </div>
+      <div className="watchlist-grid">
+        {SECTORS.map((sector) => (
+          <label className="watchlist-field" key={sector.id}>
+            <span>{sector.label}</span>
+            <input
+              value={draft[sector.id]}
+              onChange={(event) => onChange(sector.id, event.target.value)}
+              placeholder="NVDA, AMD, PLTR"
+            />
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function SignalPanel({ tickers }: { tickers: RankedTicker[] }) {
   const leaders = [...tickers].sort((a, b) => b.signal.score - a.signal.score).slice(0, 5);
 
@@ -420,22 +506,48 @@ export function DashboardShell({ initialData }: DashboardShellProps) {
   const [data, setData] = useState(initialData);
   const [activeSector, setActiveSector] = useState<SectorId>("ai");
   const [tradingMode, setTradingMode] = useState<TradingMode>("momentum");
+  const [watchlistDraft, setWatchlistDraft] = useState<WatchlistDraft>(() => defaultWatchlistDraft());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const refreshData = useCallback(async () => {
+  const refreshData = useCallback(async (overrideDraft?: WatchlistDraft) => {
     setIsRefreshing(true);
     try {
-      const response = await fetch("/api/dashboard", { cache: "no-store" });
+      const params = buildWatchlistParams(overrideDraft ?? watchlistDraft);
+      const query = params.size > 0 ? `?${params.toString()}` : "";
+      const response = await fetch(`/api/dashboard${query}`, { cache: "no-store" });
       const nextData = (await response.json()) as DashboardPayload;
       setData(nextData);
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [watchlistDraft]);
 
   useEffect(() => {
     const interval = window.setInterval(refreshData, 60_000);
     return () => window.clearInterval(interval);
+  }, [refreshData]);
+
+  useEffect(() => {
+    setWatchlistDraft(parseStoredWatchlist());
+  }, []);
+
+  const updateWatchlistDraft = useCallback((sector: SectorId, value: string) => {
+    setWatchlistDraft((current) => ({
+      ...current,
+      [sector]: value.toUpperCase(),
+    }));
+  }, []);
+
+  const saveWatchlist = useCallback(() => {
+    window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(watchlistDraft));
+    void refreshData();
+  }, [refreshData, watchlistDraft]);
+
+  const resetWatchlist = useCallback(() => {
+    const defaults = defaultWatchlistDraft();
+    window.localStorage.removeItem(WATCHLIST_STORAGE_KEY);
+    setWatchlistDraft(defaults);
+    void refreshData(defaults);
   }, [refreshData]);
 
   const allSelected = useMemo(() => Object.values(data.sectors).flat(), [data]);
@@ -554,6 +666,12 @@ export function DashboardShell({ initialData }: DashboardShellProps) {
         <div className="content-grid">
           <div className="main-column">
             <TradingModes mode={tradingMode} onChange={setTradingMode} />
+            <WatchlistEditor
+              draft={watchlistDraft}
+              onChange={updateWatchlistDraft}
+              onSave={saveWatchlist}
+              onReset={resetWatchlist}
+            />
             <section className="sector-overview" aria-label="Sector overview">
               {sectorSummaries.map((summary) => (
                 <SectorCard

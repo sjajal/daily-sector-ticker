@@ -27,6 +27,7 @@ Then open `http://localhost:3000`.
 - `QUIVER_API_KEY` is optional and enables congressional/politician trade signals through Quiver Quantitative.
 - The selected five tickers per sector are cached for the current New York trading date.
 - Quotes and news refresh every minute.
+- Users can customize ticker lists in the dashboard; those watchlists are saved in browser local storage and passed to `/api/dashboard` as sector query parameters.
 - If `FINNHUB_API_KEY` is missing, the app renders demo data with a visible setup warning.
 - If Finnhub fails after a successful fetch, the API returns the last successful market snapshot with a warning.
 
