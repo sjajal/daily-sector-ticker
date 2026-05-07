@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Daily Sector Ticker Dashboard Preview</title>
+    <style>
+      :root {
+        --background: #06080d;
+        --foreground: #e5eef7;
+        --muted: #8a98aa;
+        --panel: #0d121b;
+        --border: #243142;
+        --green: #2bd576;
+        --red: #ff5d6c;
+        --cyan: #38bdf8;
+        --amber: #fbbf24;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(180deg, rgba(56, 189, 248, 0.08), transparent 280px),
+          repeating-linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.018) 0,
+            rgba(255, 255, 255, 0.018) 1px,
+            transparent 1px,
+            transparent 36px
+          ),
+          var(--background);
+        color: var(--foreground);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      .dashboard {
+        width: min(1760px, 100%);
+        margin: 0 auto;
+        padding: 18px;
+      }
+
+      .terminal-frame,
+      .panel {
+        border: 1px solid var(--border);
+        background: rgba(8, 12, 19, 0.9);
+      }
+
+      .terminal-frame {
+        box-shadow: 0 18px 80px rgba(0, 0, 0, 0.34);
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: center;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.4rem, 2.4vw, 2.15rem);
+      }
+
+      .brand span,
+      .meta,
+      th,
+      .ticker-sub,
+      .news-source {
+        color: var(--muted);
+      }
+
+      .controls,
+      .sector-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .pill,
+      .sector-tab,
+      .refresh {
+        min-height: 36px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #0b111a;
+        color: var(--foreground);
+        padding: 8px 12px;
+        font: inherit;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 0.8rem;
+      }
+
+      .live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 14px var(--green);
+      }
+
+      .ticker-tape {
+        overflow: hidden;
+        border-bottom: 1px solid var(--border);
+        background: #090e15;
+      }
+
+      .ticker-track {
+        display: flex;
+        width: max-content;
+        animation: ticker-scroll 42s linear infinite;
+      }
+
+      .ticker-item {
+        display: inline-flex;
+        gap: 10px;
+        white-space: nowrap;
+        padding: 10px 18px;
+        border-right: 1px solid var(--border);
+        font-size: 0.88rem;
+      }
+
+      .ticker-symbol {
+        color: var(--cyan);
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-weight: 700;
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(310px, 390px);
+        gap: 14px;
+        padding: 14px;
+      }
+
+      .main-column,
+      .side-column,
+      .movement-grid,
+      .news-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .panel {
+        border-radius: 8px;
+        background: rgba(13, 18, 27, 0.92);
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      h2,
+      h3,
+      h4 {
+        margin: 0;
+      }
+
+      .sector-tab.active {
+        border-color: var(--cyan);
+        color: var(--cyan);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(36, 49, 66, 0.72);
+        text-align: left;
+        font-size: 0.9rem;
+      }
+
+      th {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+      }
+
+      .mono,
+      .price,
+      .change {
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      }
+
+      .price,
+      .change {
+        text-align: right;
+      }
+
+      .positive {
+        color: var(--green);
+      }
+
+      .negative {
+        color: var(--red);
+      }
+
+      .movement-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .movement-list,
+      .news-list {
+        padding: 12px;
+      }
+
+      .movement-row {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr) 70px;
+        gap: 10px;
+        align-items: center;
+        min-height: 34px;
+      }
+
+      .movement-bar {
+        height: 8px;
+        border-radius: 999px;
+        background: #17202d;
+        overflow: hidden;
+      }
+
+      .movement-fill {
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .news-list {
+        max-height: 650px;
+        overflow: auto;
+      }
+
+      .news-card {
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid rgba(36, 49, 66, 0.88);
+        border-radius: 8px;
+        background: #0a1018;
+      }
+
+      .news-source {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 0.75rem;
+      }
+
+      @keyframes ticker-scroll {
+        from {
+          transform: translateX(0);
+        }
+
+        to {
+          transform: translateX(-50%);
+        }
+      }
+
+      @media (max-width: 1020px) {
+        .content-grid,
+        .topbar {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .dashboard {
+          padding: 10px;
+        }
+
+        .movement-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="dashboard">
+      <div class="terminal-frame">
+        <header class="topbar">
+          <div class="brand">
+            <h1>Daily Sector Ticker Dashboard</h1>
+            <span>AI / Energy / Space</span>
+          </div>
+          <div class="controls">
+            <span class="pill"><span class="live-dot"></span>Market open</span>
+            <span class="pill">Daily set 2026-05-07</span>
+            <span class="pill">Updated <span id="updated-at">10:42:18 AM EDT</span></span>
+            <button class="refresh" id="refresh-button">Refresh</button>
+          </div>
+        </header>
+
+        <div class="ticker-tape">
+          <div class="ticker-track">
+            <span class="ticker-item"><strong class="ticker-symbol">NVDA</strong>AI chip momentum lifts sector tape<span class="ticker-sub">Demo Wire</span></span>
+            <span class="ticker-item"><strong class="ticker-symbol">XOM</strong>Energy names move with crude pricing<span class="ticker-sub">Demo Wire</span></span>
+            <span class="ticker-item"><strong class="ticker-symbol">RKLB</strong>Launch backlog update draws attention<span class="ticker-sub">Demo Wire</span></span>
+            <span class="ticker-item"><strong class="ticker-symbol">PLTR</strong>Software demand keeps AI watchlist active<span class="ticker-sub">Demo Wire</span></span>
+            <span class="ticker-item"><strong class="ticker-symbol">FSLR</strong>Solar volatility leads energy moves<span class="ticker-sub">Demo Wire</span></span>
+            <span class="ticker-item"><strong class="ticker-symbol">NVDA</strong>AI chip momentum lifts sector tape<span class="ticker-sub">Demo Wire</span></span>
+            <span class="ticker-item"><strong class="ticker-symbol">XOM</strong>Energy names move with crude pricing<span class="ticker-sub">Demo Wire</span></span>
+            <span class="ticker-item"><strong class="ticker-symbol">RKLB</strong>Launch backlog update draws attention<span class="ticker-sub">Demo Wire</span></span>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="main-column">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Top Stocks Today</h2>
+                  <div class="meta">Ranked daily by movement, quote range, direction, and news count.</div>
+                </div>
+                <div class="sector-tabs">
+                  <button class="sector-tab active">AI</button>
+                  <button class="sector-tab">Energy</button>
+                  <button class="sector-tab">Space</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Ticker</th>
+                      <th>Company</th>
+                      <th>Price</th>
+                      <th>Change</th>
+                      <th>Percent</th>
+                      <th>News</th>
+                      <th>Quote Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td class="mono">#1</td><td class="mono"><strong>NVDA</strong></td><td>NVIDIA</td><td class="price" data-price="887.42">$887.42</td><td class="change positive" data-change="18.31">+18.31</td><td class="change positive" data-percent="2.11">+2.11%</td><td class="mono">4</td><td class="ticker-sub quote-time">May 7, 10:42 AM EDT</td></tr>
+                    <tr><td class="mono">#2</td><td class="mono"><strong>PLTR</strong></td><td>Palantir</td><td class="price" data-price="24.70">$24.70</td><td class="change positive" data-change="0.66">+0.66</td><td class="change positive" data-percent="2.74">+2.74%</td><td class="mono">3</td><td class="ticker-sub quote-time">May 7, 10:42 AM EDT</td></tr>
+                    <tr><td class="mono">#3</td><td class="mono"><strong>SMCI</strong></td><td>Super Micro Computer</td><td class="price" data-price="812.20">$812.20</td><td class="change negative" data-change="-9.14">-9.14</td><td class="change negative" data-percent="-1.11">-1.11%</td><td class="mono">2</td><td class="ticker-sub quote-time">May 7, 10:42 AM EDT</td></tr>
+                    <tr><td class="mono">#4</td><td class="mono"><strong>AMD</strong></td><td>Advanced Micro Devices</td><td class="price" data-price="162.14">$162.14</td><td class="change positive" data-change="1.42">+1.42</td><td class="change positive" data-percent="0.88">+0.88%</td><td class="mono">2</td><td class="ticker-sub quote-time">May 7, 10:42 AM EDT</td></tr>
+                    <tr><td class="mono">#5</td><td class="mono"><strong>AVGO</strong></td><td>Broadcom</td><td class="price" data-price="1352.61">$1352.61</td><td class="change negative" data-change="-5.30">-5.30</td><td class="change negative" data-percent="-0.39">-0.39%</td><td class="mono">1</td><td class="ticker-sub quote-time">May 7, 10:42 AM EDT</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <div class="movement-grid">
+              <section class="panel">
+                <div class="panel-header"><h3>Top Gainers</h3></div>
+                <div class="movement-list">
+                  <div class="movement-row"><span class="mono">PLTR</span><div class="movement-bar"><div class="movement-fill" style="width: 100%; background: var(--green)"></div></div><span class="change positive">+2.74%</span></div>
+                  <div class="movement-row"><span class="mono">NVDA</span><div class="movement-bar"><div class="movement-fill" style="width: 77%; background: var(--green)"></div></div><span class="change positive">+2.11%</span></div>
+                  <div class="movement-row"><span class="mono">FSLR</span><div class="movement-bar"><div class="movement-fill" style="width: 51%; background: var(--green)"></div></div><span class="change positive">+1.40%</span></div>
+                </div>
+              </section>
+              <section class="panel">
+                <div class="panel-header"><h3>Top Losers</h3></div>
+                <div class="movement-list">
+                  <div class="movement-row"><span class="mono">SPCE</span><div class="movement-bar"><div class="movement-fill" style="width: 100%; background: var(--red)"></div></div><span class="change negative">-3.12%</span></div>
+                  <div class="movement-row"><span class="mono">SMCI</span><div class="movement-bar"><div class="movement-fill" style="width: 36%; background: var(--red)"></div></div><span class="change negative">-1.11%</span></div>
+                  <div class="movement-row"><span class="mono">AVGO</span><div class="movement-bar"><div class="movement-fill" style="width: 13%; background: var(--red)"></div></div><span class="change negative">-0.39%</span></div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <aside class="side-column">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>News Alerts</h2>
+                  <div class="meta">Ticker-specific headlines, newest first.</div>
+                </div>
+              </div>
+              <div class="news-list">
+                <div class="news-card"><div class="news-source"><span><strong class="ticker-symbol">NVDA</strong> Demo Wire</span><span>12m ago</span></div><h4>NVIDIA moves on fresh AI sector momentum and investor positioning</h4></div>
+                <div class="news-card"><div class="news-source"><span><strong class="ticker-symbol">RKLB</strong> Demo Wire</span><span>24m ago</span></div><h4>Rocket Lab launch backlog update draws renewed attention</h4></div>
+                <div class="news-card"><div class="news-source"><span><strong class="ticker-symbol">XOM</strong> Demo Wire</span><span>31m ago</span></div><h4>Energy names move as crude pricing reshapes the morning tape</h4></div>
+                <div class="news-card"><div class="news-source"><span><strong class="ticker-symbol">PLTR</strong> Demo Wire</span><span>42m ago</span></div><h4>Palantir leads software names in the AI watchlist</h4></div>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </div>
+    </main>
+    <script>
+      const formatter = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      });
+
+      function signed(value, suffix = "") {
+        return `${value > 0 ? "+" : ""}${value.toFixed(2)}${suffix}`;
+      }
+
+      function setTone(element, value) {
+        element.classList.toggle("positive", value >= 0);
+        element.classList.toggle("negative", value < 0);
+      }
+
+      function updatePreview() {
+        const now = new Date();
+        const time = new Intl.DateTimeFormat("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit",
+          timeZoneName: "short",
+        }).format(now);
+        const quoteTime = new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZoneName: "short",
+        }).format(now);
+
+        document.getElementById("updated-at").textContent = time;
+        document.querySelectorAll(".quote-time").forEach((cell) => {
+          cell.textContent = quoteTime;
+        });
+
+        document.querySelectorAll("tbody tr").forEach((row) => {
+          const priceCell = row.querySelector("[data-price]");
+          const changeCell = row.querySelector("[data-change]");
+          const percentCell = row.querySelector("[data-percent]");
+          const price = Number(priceCell.dataset.price);
+          const drift = Number((Math.random() * 2 - 1).toFixed(2));
+          const nextPrice = Math.max(1, price + drift);
+          const nextChange = Number(changeCell.dataset.change) + drift;
+          const nextPercent = (nextChange / Math.max(1, nextPrice - nextChange)) * 100;
+
+          priceCell.dataset.price = nextPrice.toFixed(2);
+          changeCell.dataset.change = nextChange.toFixed(2);
+          percentCell.dataset.percent = nextPercent.toFixed(2);
+
+          priceCell.textContent = formatter.format(nextPrice);
+          changeCell.textContent = signed(nextChange);
+          percentCell.textContent = signed(nextPercent, "%");
+          setTone(changeCell, nextChange);
+          setTone(percentCell, nextPercent);
+        });
+
+        const cards = Array.from(document.querySelectorAll(".news-card"));
+        if (cards.length > 1) {
+          const first = cards.shift();
+          first.querySelector(".news-source span:last-child").textContent = "now";
+          document.querySelector(".news-list").appendChild(first);
+        }
+      }
+
+      document.getElementById("refresh-button").addEventListener("click", updatePreview);
+    </script>
+  </body>
+</html>
